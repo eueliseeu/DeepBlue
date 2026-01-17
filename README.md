@@ -88,7 +88,6 @@ Em poucos segundos, os arquivos Docker serão gerados no diretório do projeto.
 | PostgreSQL | 17-alpine | 5432  |
 | MySQL      | 9-oracle  | 3306  |
 | MongoDB    | 8         | 27017 |
-| Redis      | 7-alpine  | 6379  |
 | Nenhum     | —         | —     |
 
 ---
