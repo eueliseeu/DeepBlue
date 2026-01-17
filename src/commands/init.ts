@@ -60,6 +60,9 @@ export const initCommand = async (): Promise<void> => {
     placeholder: String(selectedTech.defaultPort),
     defaultValue: String(selectedTech.defaultPort),
     validate: (value) => {
+      if (!value || value.trim() === "") {
+        return undefined;
+      }
       if (!isValidPort(value)) {
         return "Porta inválida. Use um número entre 1 e 65535";
       }
@@ -72,7 +75,11 @@ export const initCommand = async (): Promise<void> => {
     process.exit(0);
   }
 
-  const port = normalizePort(String(portInput));
+  // Se vazio ou inválido, usa porta padrão
+  const port =
+    portInput && isValidPort(String(portInput))
+      ? normalizePort(String(portInput))
+      : selectedTech.defaultPort;
 
   const s = spinner();
   s.start(MESSAGES.searching);
