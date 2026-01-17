@@ -4,7 +4,7 @@
   "description": "CLI moderna para automação de Docker - crie Dockerfiles e docker-compose.yml em segundos com suporte a 7 linguagens e 4 bancos de dados",
   "main": "dist/index.js",
   "bin": {
-    "deepblue": "./dist/index.js"
+    "deepblue": "dist/index.js"
   },
   "repository": {
     "type": "git",
