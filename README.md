@@ -200,18 +200,6 @@ npm start        # Executa a versão compilada
 
 ---
 
-## Documentação
-
-A documentação completa está disponível em [`/docs`](./docs), incluindo:
-
-* Arquitetura do projeto
-* Guia de contribuição
-* Como adicionar novas linguagens
-* Como criar novos templates
-* Padrões e boas práticas
-
----
-
 ## Contribuindo
 
 Contribuições são bem-vindas.
