@@ -11,8 +11,6 @@
 
 Gere Dockerfiles e `docker-compose.yml` prontos para produção em segundos, com suporte a múltiplas linguagens e bancos de dados.
 
-[Instalação](#-instalação) • [Uso](#-uso) • [Funcionalidades](#-funcionalidades) • [Documentação](./docs)
-
 </div>
 
 ---
