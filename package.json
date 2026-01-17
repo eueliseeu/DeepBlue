@@ -1,0 +1,64 @@
+{
+  "name": "deepblue-cli",
+  "version": "1.0.0",
+  "description": "CLI moderna para automação de Docker - crie Dockerfiles e docker-compose.yml em segundos com suporte a 7 linguagens e 4 bancos de dados",
+  "main": "dist/index.js",
+  "bin": {
+    "deepblue": "./dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eueliseeu/DeepBlue.git"
+  },
+  "homepage": "https://github.com/eueliseeu/DeepBlue#readme",
+  "bugs": {
+    "url": "https://github.com/eueliseeu/DeepBlue/issues"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "docker",
+    "cli",
+    "automation",
+    "dockerfile",
+    "docker-compose",
+    "devops",
+    "nodejs",
+    "python",
+    "go",
+    "java",
+    "php",
+    "ruby",
+    "rust",
+    "postgresql",
+    "mysql",
+    "mongodb",
+    "redis"
+  ],
+  "author": "Eliseu <eueliseeu@gmail.com>",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^25.0.9",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2",
+    "fs-extra": "^11.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
