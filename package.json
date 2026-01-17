@@ -1,6 +1,6 @@
 {
   "name": "deepblue-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI moderna para automação de Docker - crie Dockerfiles e docker-compose.yml em segundos com suporte a 7 linguagens e 4 bancos de dados",
   "main": "dist/index.js",
   "bin": {
