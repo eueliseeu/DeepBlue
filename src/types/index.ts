@@ -7,7 +7,7 @@ export type Technology =
   | "ruby"
   | "rust";
 
-export type Database = "none" | "postgres" | "mysql" | "mongodb" | "redis";
+export type Database = "none" | "postgres" | "mysql" | "mongodb";
 
 export interface TemplateConfig {
   technology: Technology;
