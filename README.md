@@ -1,335 +1,75 @@
+# DeepBlue CLI - Nota de Atualização
 
-# DeepBlue CLI
+#### Versão 1.2.0
 
-<div align="center">
+Esta versão traz melhorias importantes para tornar seu ambiente de desenvolvimento mais robusto e eficiente, com foco na redução de erros manuais e na otimização do processo de construção dos containers.
 
-![Version](https://img.shields.io/npm/v/deepblue-cli.svg)
-![License](https://img.shields.io/npm/l/deepblue-cli.svg)
-![Downloads](https://img.shields.io/npm/dt/deepblue-cli.svg)
+## O que há de novo
 
-**CLI moderna para automação de ambientes Docker**
+### 1. Detecção Automática (Zero Config)
 
-Gere Dockerfiles e `docker-compose.yml` prontos para produção em segundos, com suporte a múltiplas linguagens e bancos de dados.
+Agora a CLI é capaz de analisar seu projeto e identificar automaticamente a linguagem e as dependências usadas, sem que você precise configurar nada manualmente.
 
-</div>
+**Como funciona:** Ela busca arquivos como `package.json`, `requirements.txt`, `go.mod` e outros para sugerir a configuração mais adequada para o container.
 
----
+**Vantagem:** Menos tempo configurando, mais tempo codando.
 
-## Visão Geral
+### 2. Gerenciamento Inteligente do .dockerignore
 
-O **DeepBlue CLI** é uma ferramenta de linha de comando focada em produtividade e padronização de ambientes Docker.  
-Ele permite criar configurações completas de containers seguindo boas práticas modernas, sem necessidade de conhecimento profundo em Docker.
+A partir de agora, todos os templates geram automaticamente um arquivo `.dockerignore`.
 
-Ideal para:
-- Projetos novos
-- Padronização de ambientes
-- Onboarding rápido de times
-- Desenvolvimento local e produção
+**Por que isso é importante:** Ele evita que pastas pesadas (como `node_modules`, `.git`, `dist`) e arquivos desnecessários sejam copiados para o Docker durante o build.
 
----
+**Resultado:** Builds mais rápidos e consistentes, garantindo que as dependências sejam instaladas apenas dentro do container.
 
-## Instalação
+### 3. Dockerfiles Mais Resilientes
 
-Requer **Node.js 18+**
+Reestruturamos os templates para que funcionem bem mesmo em projetos ainda no início.
+
+**Melhoria:** Comandos como `npm install`, `pip install` ou `go mod tidy` agora só rodam se os arquivos de dependências realmente existirem.
+
+**Benefício:** O build não quebra se você ainda não criou esses arquivos, dando mais flexibilidade durante o desenvolvimento.
+
+### 4. Healthchecks Integrados no Docker Compose
+
+A CLI agora adiciona verificações de saúde automáticas para bancos de dados (PostgreSQL, MySQL, MongoDB e Redis) no arquivo `docker-compose.yml`.
+
+**Como ajuda:** Sua aplicação só sobe depois que o banco de dados estiver pronto para receber conexões.
+
+**Evita aqueles erros** chatos de "Connection Refused" na inicialização.
+
+## Outras Melhorias Técnicas
+
+- **Builds em Etapas (Multi-Stage):** Para linguagens como Go, Rust e Java, geramos imagens menores e mais seguras para produção.
+- **Segurança Reinforçada:** Containers Node.js e Python agora rodam com usuários não-root por padrão.
+- **Compatibilidade com Bancos:** No PHP, a CLI instala automaticamente as extensões corretas do banco escolhido (MySQL ou PostgreSQL).
+
+## Como atualizar
+
+Para experimentar essas novidades, basta atualizar a CLI e rodar o comando `init` no seu projeto:
 
 ```bash
-npm install -g deepblue-cli
-````
-
----
-
-## Quick Start
-
-Execute o comando abaixo e siga o assistente interativo:
-
-```bash
+# Atualize a CLI e reinicie o ambiente do seu projeto
 deepblue init
 ```
 
-Em poucos segundos, os arquivos Docker serão gerados no diretório do projeto.
+## Próximas Melhorias
+
+Estamos sempre ouvindo nossa comunidade! Aqui estão algumas funcionalidades que já estão no nosso radar para as próximas versões:
+
+- **Internacionalização (i18n):** Suporte a múltiplos idiomas, começando com Português e Inglês, para que você use a CLI no idioma de sua preferência.
+- **Comandos de Utilitários Simplificados:**
+  - `deepblue up`: Sobe todos os serviços do projeto (substitui `docker-compose up --build`).
+  - `deepblue down`: Para e remove os containers do projeto.
+  - `deepblue run`: Sobe o ambiente e já mostra os logs em tempo real.
+  - `deepblue clean`: Remove containers, imagens e volumes órfãos relacionados ao projeto atual.
+
+Se você tem mais sugestões, não deixe de compartilhar!
+
+## Agradecimentos
+
+Um agradecimento especial aos 167 desenvolvedores que interaram da CLI e alguns que enviaram feedback e sugeriram várias dessas melhorias. Vocês são essenciais para evoluirmos juntos!
+
+Continue usando o DeepBlue e acompanhe as novidades. 🚀
 
 ---
-
-## Funcionalidades
-
-### 🚀 Recursos Principais
-
-* **Interface interativa baseada em prompts** - Experiência guiada e intuitiva
-* **Geração automática de arquivos Docker** - Dockerfile, docker-compose.yml e .dockerignore
-* **Suporte a múltiplas linguagens e versões** - 7 linguagens de programação
-* **Integração opcional com bancos de dados** - PostgreSQL, MySQL e MongoDB
-* **Templates otimizados para produção** - Seguindo best practices Docker
-
-### 🎯 Funcionalidades Avançadas
-
-* **Detecção automática de projeto** - Identifica automaticamente a linguagem e versão do seu projeto
-  - Node.js (via `package.json`)
-  - Python (via `requirements.txt` ou `pyproject.toml`)
-  - Go (via `go.mod`)
-  - Java (via `pom.xml` ou `build.gradle`)
-  - PHP (via `composer.json`)
-  - Ruby (via `Gemfile`)
-  - Rust (via `Cargo.toml`)
-
-* **Detecção de versão instalada** - Detecta a versão da linguagem instalada no sistema
-  - Sugere automaticamente a versão mais adequada
-  - Permite usar versões personalizadas não listadas
-
-* **Geração inteligente de .dockerignore** - Cria arquivos .dockerignore otimizados por linguagem
-  - Padrões comuns (Git, IDEs, documentação)
-  - Padrões específicos por tecnologia
-  - Reduz o tamanho do build context
-
-* **Configuração de portas personalizadas** - Validação e normalização automática
-* **Código 100% TypeScript** - Type-safe e mantível
-* **Estrutura extensível** - Fácil adicionar novas tecnologias
-
----
-
-## Tecnologias Suportadas
-
-### Linguagens
-
-| Linguagem | Versões Disponíveis    | Porta Padrão |
-| --------- | ---------------------- | ------------ |
-| Node.js   | 25, 24, 22, 20         | 3000         |
-| Python    | 3.14, 3.13, 3.12, 3.11 | 8000         |
-| Go        | 1.25, 1.24             | 8080         |
-| Java      | 27, 26, 21, 17         | 8080         |
-| PHP       | 8.4, 8.3, 8.2, 8.1     | 8000         |
-| Ruby      | 4.0, 3.4, 3.3, 3.2     | 3000         |
-| Rust      | 1.92, 1.82, 1.81       | 8080         |
-
----
-
-### Bancos de Dados
-
-| Banco      | Imagem    | Porta |
-| ---------- | --------- | ----- |
-| PostgreSQL | 17-alpine | 5432  |
-| MySQL      | 9-oracle  | 3306  |
-| MongoDB    | 8         | 27017 |
-| Nenhum     | —         | —     |
-
----
-
-## Uso
-
-### Comando Principal
-
-```bash
-deepblue init
-```
-
-### Fluxo de Execução (Exemplo)
-
-#### Com Detecção Automática de Projeto
-
-```bash
-DeepBlue - Docker Automation
-
-🔍 Detectando projeto...
-
-✓ Node.js detectado
-  Projeto: my-app
-  Arquivo: package.json
-  Versão: 20
-
-? Deseja usar a configuração detectada? Sim
-? Qual versão? 20 (instalada)
-? Deseja adicionar um banco de dados? PostgreSQL
-? Qual porta expor? 3000
-? Gerar .dockerignore para Node.js? Sim
-
-✓ Gerando arquivos Docker...
-
-Arquivos criados com sucesso:
-  ✓ Dockerfile
-  ✓ docker-compose.yml
-  ✓ .dockerignore
-```
-
-#### Sem Detecção (Configuração Manual)
-
-```bash
-DeepBlue - Docker Automation
-
-? Qual linguagem você deseja usar? Node.js
-? Qual versão? 25
-? Deseja adicionar um banco de dados? PostgreSQL
-? Qual porta expor? 3000
-? Gerar .dockerignore para Node.js? Sim
-
-Gerando arquivos Docker...
-
-Arquivos criados com sucesso:
-  ✓ Dockerfile
-  ✓ docker-compose.yml
-  ✓ .dockerignore
-```
-
----
-
-## Arquivos Gerados
-
-### Dockerfile (Node.js)
-
-```dockerfile
-FROM node:25-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-
-EXPOSE 3000
-
-USER node
-
-CMD ["npm", "start"]
-```
-
----
-
-### docker-compose.yml (com PostgreSQL)
-
-```yaml
-version: '3.8'
-
-services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/app_db
-    depends_on:
-      - db
-
-  db:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: app_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-volumes:
-  postgres_data:
-```
-
----
-
-### .dockerignore (Node.js)
-
-```
-# Generated by DeepBlue CLI
-# Optimized .dockerignore for NODE
-
-# Git
-.git
-.gitignore
-
-# CI/CD
-.github
-.gitlab-ci.yml
-
-# IDE
-.vscode
-.idea
-*.swp
-
-# Documentation
-README.md
-*.md
-docs/
-
-# Docker
-Dockerfile
-docker-compose.yml
-
-# Node.js
-node_modules/
-npm-debug.log*
-
-# Testing
-coverage/
-*.test.js
-__tests__/
-
-# Build
-dist/
-build/
-.next/
-
-# Environment
-.env
-.env.local
-```
-
----
-
-## Desenvolvimento Local
-
-```bash
-git clone https://github.com/eueliseeu/DeepBlue.git
-cd DeepBlue
-
-npm install
-npm run build
-npm link
-
-deepblue init
-```
-
-### Scripts Disponíveis
-
-```bash
-npm run dev      # Modo desenvolvimento
-npm run build    # Build TypeScript
-npm run watch    # Build em modo watch
-npm start        # Executa a versão compilada
-```
-
----
-
-## Contribuindo
-
-Contribuições são bem-vindas.
-
-1. Faça um fork do projeto
-2. Crie uma branch (`git checkout -b feature/nova-feature`)
-3. Commit suas alterações
-4. Faça o push da branch
-5. Abra um Pull Request
-
----
-
-## Licença
-
-Distribuído sob a licença MIT.
-Consulte o arquivo [LICENSE](LICENSE) para mais informações.
-
----
-
-## Autor
-
-**Eliseu Pereira**
-
-* GitHub: [https://github.com/eueliseeu](https://github.com/eueliseeu)
-* LinkedIn: [https://linkedin.com/in/eueliseeu](https://linkedin.com/in/eueliseeu)
-
----
-
-<div align="center">
-
-**DeepBlue CLI**
-Automação Docker simples, rápida e profissional.
-
-</div>
