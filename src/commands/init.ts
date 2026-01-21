@@ -1,44 +1,126 @@
-import { intro, select, text, spinner, outro, isCancel } from "@clack/prompts";
+import { select, text, isCancel, confirm } from "@clack/prompts";
 import chalk from "chalk";
 import { Technology, Database, TemplateConfig } from "../types";
 import { TECHNOLOGIES, DATABASES, MESSAGES } from "../templates/constants";
 import { getTemplate } from "../templates";
-import { writeDockerFiles, isValidPort, normalizePort } from "../utils";
+import {
+  writeDockerFiles,
+  isValidPort,
+  normalizePort,
+  writeDockerIgnore,
+} from "../utils";
+import { detectProject } from "../utils/project-detector";
+import { detectInstalledVersion } from "../utils/version-detector";
 
 export const initCommand = async (): Promise<void> => {
   console.clear();
+  console.log(chalk.blue.bold(`\n${MESSAGES.intro}\n`));
 
-  intro(chalk.bgBlue.bold(` ${MESSAGES.intro} `));
+  const projectDetection = await detectProject();
 
-  const technology = (await select({
-    message: MESSAGES.selectTech,
-    options: TECHNOLOGIES.map((tech) => ({
-      value: tech.value,
-      label: tech.label,
-    })),
-  })) as Technology;
+  let technology: Technology;
+  let detectedVersion: string | null = null;
+  let installedVersion: string | null = null;
 
-  if (isCancel(technology)) {
-    outro(chalk.yellow(MESSAGES.cancel));
-    process.exit(0);
+  if (projectDetection.detected && projectDetection.technology) {
+    const techLabel = TECHNOLOGIES.find(
+      (t) => t.value === projectDetection.technology,
+    )?.label;
+
+    console.log(chalk.green(`\n✓ ${techLabel} detectado\n`));
+
+    const useDetected = await confirm({
+      message: MESSAGES.useDetectedConfig,
+      initialValue: true,
+    });
+
+    if (isCancel(useDetected)) {
+      console.log(chalk.yellow(`\n${MESSAGES.cancel}\n`));
+      process.exit(0);
+    }
+
+    if (useDetected) {
+      technology = projectDetection.technology;
+      detectedVersion = projectDetection.version;
+    } else {
+      technology = (await select({
+        message: MESSAGES.selectTech,
+        options: TECHNOLOGIES.map((tech) => ({
+          value: tech.value,
+          label: tech.label,
+        })),
+      })) as Technology;
+
+      if (isCancel(technology)) {
+        console.log(chalk.yellow(`\n${MESSAGES.cancel}\n`));
+        process.exit(0);
+      }
+    }
+  } else {
+    technology = (await select({
+      message: MESSAGES.selectTech,
+      options: TECHNOLOGIES.map((tech) => ({
+        value: tech.value,
+        label: tech.label,
+      })),
+    })) as Technology;
+
+    if (isCancel(technology)) {
+      console.log(chalk.yellow(`\n${MESSAGES.cancel}\n`));
+      process.exit(0);
+    }
   }
 
   const selectedTech = TECHNOLOGIES.find((t) => t.value === technology);
   if (!selectedTech) {
-    outro(chalk.red(`${MESSAGES.error} Tecnologia não encontrada`));
+    console.log(chalk.red(`\n${MESSAGES.error} Tecnologia não encontrada\n`));
     process.exit(1);
+  }
+
+  const versionDetection = detectInstalledVersion(technology);
+  if (versionDetection.detected && versionDetection.formattedVersion) {
+    installedVersion = versionDetection.formattedVersion;
+  }
+
+  let suggestedVersion: string | null = detectedVersion || installedVersion;
+  let versionOptions = selectedTech.versions.map((v) => ({
+    value: v,
+    label: v,
+  }));
+
+  if (suggestedVersion) {
+    const matchesExisting = selectedTech.versions.some((v) =>
+      v.includes(suggestedVersion!),
+    );
+
+    if (!matchesExisting) {
+      versionOptions = [
+        {
+          value: suggestedVersion,
+          label: `${suggestedVersion} ${chalk.dim("(instalada)")}`,
+        },
+        ...versionOptions,
+      ];
+    } else {
+      versionOptions = versionOptions.map((opt) => {
+        if (opt.value.includes(suggestedVersion!)) {
+          return {
+            ...opt,
+            label: `${opt.value} ${chalk.dim("(instalada)")}`,
+          };
+        }
+        return opt;
+      });
+    }
   }
 
   const version = (await select({
     message: MESSAGES.selectVersion,
-    options: selectedTech.versions.map((v) => ({
-      value: v,
-      label: v,
-    })),
+    options: versionOptions,
   })) as string;
 
   if (isCancel(version)) {
-    outro(chalk.yellow(MESSAGES.cancel));
+    console.log(chalk.yellow(`\n${MESSAGES.cancel}\n`));
     process.exit(0);
   }
 
@@ -51,7 +133,7 @@ export const initCommand = async (): Promise<void> => {
   })) as Database;
 
   if (isCancel(database)) {
-    outro(chalk.yellow(MESSAGES.cancel));
+    console.log(chalk.yellow(`\n${MESSAGES.cancel}\n`));
     process.exit(0);
   }
 
@@ -71,20 +153,29 @@ export const initCommand = async (): Promise<void> => {
   });
 
   if (isCancel(portInput)) {
-    outro(chalk.yellow(MESSAGES.cancel));
+    console.log(chalk.yellow(`\n${MESSAGES.cancel}\n`));
     process.exit(0);
   }
 
-  // Se vazio ou inválido, usa porta padrão
+  const generateDockerIgnoreFile = await confirm({
+    message: MESSAGES.generateDockerIgnore.replace(
+      "[Linguagem]",
+      selectedTech.label,
+    ),
+    initialValue: true,
+  });
+
+  if (isCancel(generateDockerIgnoreFile)) {
+    console.log(chalk.yellow(`\n${MESSAGES.cancel}\n`));
+    process.exit(0);
+  }
+
   const port =
     portInput && isValidPort(String(portInput))
       ? normalizePort(String(portInput))
       : selectedTech.defaultPort;
 
-  const s = spinner();
-  s.start(MESSAGES.searching);
-
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  console.log(chalk.blue(`\n${MESSAGES.generating}`));
 
   const config: TemplateConfig = {
     technology: technology,
@@ -95,22 +186,26 @@ export const initCommand = async (): Promise<void> => {
 
   const template = getTemplate(config);
 
-  s.message(MESSAGES.generating);
-
   const result = await writeDockerFiles(
     template.dockerfile,
     template.dockerCompose,
   );
 
-  s.stop();
+  const generatedFiles: string[] = result.files || [];
+
+  if (generateDockerIgnoreFile) {
+    const dockerIgnoreResult = await writeDockerIgnore(technology);
+    if (dockerIgnoreResult.success) {
+      generatedFiles.push(".dockerignore");
+    }
+  }
 
   if (result.success) {
-    outro(
-      chalk.green.bold(`\n${MESSAGES.success}\n`) +
-        result.files?.map((f) => chalk.cyan(`  ✓ ${f}`)).join("\n"),
-    );
+    console.log(chalk.green.bold(`\n${MESSAGES.success}`));
+    generatedFiles.forEach((f) => console.log(chalk.cyan(`  ✓ ${f}`)));
+    console.log("");
   } else {
-    outro(chalk.red(`${MESSAGES.error} ${result.message}`));
+    console.log(chalk.red(`\n${MESSAGES.error} ${result.message}\n`));
     process.exit(1);
   }
 };
