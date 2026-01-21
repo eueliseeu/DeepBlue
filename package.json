@@ -15,7 +15,7 @@
     "url": "https://github.com/eueliseeu/DeepBlue/issues"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/index.js",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "watch": "tsc --watch"
@@ -36,8 +36,7 @@
     "rust",
     "postgresql",
     "mysql",
-    "mongodb",
-    "redis"
+    "mongodb"
   ],
   "author": "Eliseu <eueliseeu@gmail.com>",
   "license": "MIT",
