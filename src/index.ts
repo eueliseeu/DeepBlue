@@ -2,6 +2,12 @@
 
 import { Command } from "commander";
 import { initCommand } from "./commands";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, "../package.json"), "utf-8"),
+);
 
 const program = new Command();
 
@@ -10,7 +16,7 @@ program
   .description(
     "CLI moderna para automação de Docker - crie Dockerfiles em segundos",
   )
-  .version("1.0.0");
+  .version(packageJson.version);
 
 program
   .command("init")

@@ -1,6 +1,6 @@
 # DeepBlue CLI - Nota de Atualização
 
-#### Versão 1.2.0
+#### Versão 1.2.2
 
 Esta versão traz melhorias importantes para tornar seu ambiente de desenvolvimento mais robusto e eficiente, com foco na redução de erros manuais e na otimização do processo de construção dos containers.
 
