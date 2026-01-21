@@ -1,6 +1,32 @@
 import { DockerTemplate, TemplateConfig } from "../types";
 
+const getHealthCheck = (database: string): string => {
+  const checks: Record<string, string> = {
+    postgres: `
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5`,
+    mysql: `
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5`,
+    mongodb: `
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5`,
+  };
+  return checks[database] || "";
+};
+
 const generateDatabaseService = (database: string, port?: number): string => {
+  const healthCheck = getHealthCheck(database);
+  
   const services: Record<string, string> = {
     postgres: `
   db:
@@ -12,7 +38,7 @@ const generateDatabaseService = (database: string, port?: number): string => {
     ports:
       - "\${DB_PORT:-${port || 5432}}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data${healthCheck}
     networks:
       - app-network
     restart: unless-stopped`,
@@ -27,7 +53,7 @@ const generateDatabaseService = (database: string, port?: number): string => {
     ports:
       - "\${DB_PORT:-${port || 3306}}:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql${healthCheck}
     networks:
       - app-network
     restart: unless-stopped`,
@@ -41,18 +67,7 @@ const generateDatabaseService = (database: string, port?: number): string => {
     ports:
       - "\${DB_PORT:-${port || 27017}}:27017"
     volumes:
-      - mongodb_data:/data/db
-    networks:
-      - app-network
-    restart: unless-stopped`,
-    redis: `
-  db:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-    ports:
-      - "\${DB_PORT:-${port || 6379}}:6379"
-    volumes:
-      - redis_data:/data
+      - mongodb_data:/data/db${healthCheck}
     networks:
       - app-network
     restart: unless-stopped`,
@@ -68,10 +83,14 @@ const generateDatabaseVolumes = (database: string): string => {
   mysql_data:`,
     mongodb: `
   mongodb_data:`,
-    redis: `
-  redis_data:`,
   };
   return volumes[database] || "";
+};
+
+const getDependsOn = (hasDatabase: boolean): string => {
+  return hasDatabase 
+    ? `\n    depends_on:\n      db:\n        condition: service_healthy` 
+    : "";
 };
 
 export const generateNodeTemplate = (
@@ -83,7 +102,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci --only=production
+RUN if [ -f package.json ]; then npm install --omit=dev; fi
 
 COPY . .
 
@@ -93,10 +112,8 @@ USER node
 
 CMD ["npm", "start"]`;
 
-  const hasDatabase = config.database && config.database !== "none";
-  const dockerCompose = `version: '3.8'
-
-services:
+  const hasDatabase = !!(config.database && config.database !== "none");
+  const dockerCompose = `services:
   app:
     build:
       context: .
@@ -108,7 +125,7 @@ services:
       - PORT=${config.port}${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}
     volumes:
       - .:/app
-      - /app/node_modules${hasDatabase ? "\n    depends_on:\n      - db" : ""}
+      - /app/node_modules${getDependsOn(hasDatabase)}
     restart: unless-stopped
     networks:
       - app-network
@@ -133,20 +150,20 @@ export const generatePythonTemplate = (
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY requirements.txt* ./
 
-RUN pip install --no-cache-dir -r requirements.txt
-
+RUN if [ -f requirements.txt ]; then \
+    pip install --no-cache-dir -r requirements.txt; \
+    fi
+    
 COPY . .
 
 EXPOSE ${config.port}
 
 CMD ["python", "app.py"]`;
 
-  const hasDatabase = config.database && config.database !== "none";
-  const dockerCompose = `version: '3.8'
-
-services:
+  const hasDatabase = !!(config.database && config.database !== "none");
+  const dockerCompose = `services:
   app:
     build:
       context: .
@@ -157,7 +174,7 @@ services:
       - PYTHONUNBUFFERED=1
       - PORT=${config.port}${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}
     volumes:
-      - .:/app${hasDatabase ? "\n    depends_on:\n      - db" : ""}
+      - .:/app${getDependsOn(hasDatabase)}
     restart: unless-stopped
     networks:
       - app-network
@@ -181,7 +198,8 @@ export const generateGoTemplate = (config: TemplateConfig): DockerTemplate => {
 WORKDIR /app
 
 COPY go.* ./
-RUN go mod download
+
+RUN if [ -f go.mod ]; then go mod download; fi
 
 COPY . .
 
@@ -199,10 +217,8 @@ EXPOSE ${config.port}
 
 CMD ["./main"]`;
 
-  const hasDatabase = config.database && config.database !== "none";
-  const dockerCompose = `version: '3.8'
-
-services:
+  const hasDatabase = !!(config.database && config.database !== "none");
+  const dockerCompose = `services:
   app:
     build:
       context: .
@@ -210,7 +226,7 @@ services:
     ports:
       - "\${PORT:-${config.port}}:${config.port}"
     environment:
-      - PORT=${config.port}${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}${hasDatabase ? "\n    depends_on:\n      - db" : ""}
+      - PORT=${config.port}${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}${getDependsOn(hasDatabase)}
     restart: unless-stopped
     networks:
       - app-network
@@ -251,10 +267,8 @@ EXPOSE ${config.port}
 
 ENTRYPOINT ["java", "-jar", "app.jar"]`;
 
-  const hasDatabase = config.database && config.database !== "none";
-  const dockerCompose = `version: '3.8'
-
-services:
+  const hasDatabase = !!(config.database && config.database !== "none");
+  const dockerCompose = `services:
   app:
     build:
       context: .
@@ -263,7 +277,7 @@ services:
       - "\${PORT:-${config.port}}:${config.port}"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SERVER_PORT=${config.port}${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}${hasDatabase ? "\n    depends_on:\n      - db" : ""}
+      - SERVER_PORT=${config.port}${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}${getDependsOn(hasDatabase)}
     restart: unless-stopped
     networks:
       - app-network
@@ -282,11 +296,16 @@ volumes:${generateDatabaseVolumes(config.database!)}`
 };
 
 export const generatePHPTemplate = (config: TemplateConfig): DockerTemplate => {
+  const isPostgres = config.database === 'postgres';
+  const installDbExtensions = isPostgres 
+    ? 'apk add --no-cache libpq-dev && docker-php-ext-install pdo pdo_pgsql'
+    : 'docker-php-ext-install pdo pdo_mysql';
+
   const dockerfile = `FROM php:${config.version}-fpm-alpine
 
 WORKDIR /var/www/html
 
-RUN docker-php-ext-install pdo pdo_mysql
+RUN ${installDbExtensions}
 
 COPY . .
 
@@ -296,10 +315,8 @@ EXPOSE ${config.port}
 
 CMD ["php-fpm"]`;
 
-  const hasDatabase = config.database && config.database !== "none";
-  const dockerCompose = `version: '3.8'
-
-services:
+  const hasDatabase = !!(config.database && config.database !== "none");
+  const dockerCompose = `services:
   app:
     build:
       context: .
@@ -309,7 +326,7 @@ services:
     environment:
       - PHP_ENV=production${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}
     volumes:
-      - .:/var/www/html${hasDatabase ? "\n    depends_on:\n      - db" : ""}
+      - .:/var/www/html${getDependsOn(hasDatabase)}
     restart: unless-stopped
     networks:
       - app-network
@@ -348,6 +365,8 @@ WORKDIR /app
 
 COPY Gemfile Gemfile.lock ./
 
+RUN apk add --no-cache build-base
+
 RUN bundle config --global frozen 1 && \\
     bundle install --without development test
 
@@ -357,10 +376,8 @@ EXPOSE ${config.port}
 
 CMD ["ruby", "app.rb"]`;
 
-  const hasDatabase = config.database && config.database !== "none";
-  const dockerCompose = `version: '3.8'
-
-services:
+  const hasDatabase = !!(config.database && config.database !== "none");
+  const dockerCompose = `services:
   app:
     build:
       context: .
@@ -371,7 +388,7 @@ services:
       - RACK_ENV=production
       - PORT=${config.port}${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}
     volumes:
-      - .:/app${hasDatabase ? "\n    depends_on:\n      - db" : ""}
+      - .:/app${getDependsOn(hasDatabase)}
     restart: unless-stopped
     networks:
       - app-network
@@ -417,12 +434,11 @@ COPY --from=builder /app/target/release/* /usr/local/bin/
 
 EXPOSE ${config.port}
 
-CMD ["app"]`;
+# Assume que o binário tem o nome 'app', mas na prática depende do Cargo.toml
+CMD ["/usr/local/bin/app"]`;
 
-  const hasDatabase = config.database && config.database !== "none";
-  const dockerCompose = `version: '3.8'
-
-services:
+  const hasDatabase = !!(config.database && config.database !== "none");
+  const dockerCompose = `services:
   app:
     build:
       context: .
@@ -430,7 +446,7 @@ services:
     ports:
       - "\${PORT:-${config.port}}:${config.port}"
     environment:
-      - PORT=${config.port}${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}${hasDatabase ? "\n    depends_on:\n      - db" : ""}
+      - PORT=${config.port}${hasDatabase ? "\n      - DATABASE_URL=${DATABASE_URL}" : ""}${getDependsOn(hasDatabase)}
     restart: unless-stopped
     networks:
       - app-network
